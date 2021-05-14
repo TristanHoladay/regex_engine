@@ -41,14 +41,16 @@ const runChecks = (pattern: string): void => {
 
 // could be missing a fail case //
 export const handleLastTokenNotMatched = (tokens: string, input: string): boolean => {
+  let result = false;
   const lastToken = tokens[tokens.length - 1];
   if((!input.includes(lastToken) && !symbolMap.has(lastToken))) {
     if(escapedSymbolsMap.has(lastToken) && tokens[tokens.length - 2] !== "\\") {
-      return true;
+      result = true;
     } else if(!escapedSymbolsMap.has(lastToken)) {
-      return true;
+      result = true;
     }
   }
+  return result;
 };
 
 const matchNextPair = (token: string, stringChar: string): boolean => {

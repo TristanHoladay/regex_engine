@@ -41,15 +41,14 @@ const runChecks = (pattern: string): void => {
 
 // could be missing a fail case //
 const handleLastTokenNotMatched = (tokens: string, input: string): boolean => {
+  const lastToken = tokens[tokens.length - 1];
   return (
-    !input.includes(tokens[tokens.length - 1]) &&
-    !symbolMap.has(tokens[tokens.length - 1]) &&
-    (!escapedSymbolsMap.has(tokens[tokens.length - 1]) ||
-      tokens[tokens.length - 2] === "\\")
+    (!input.includes(lastToken) && !symbolMap.has(lastToken)) ||
+    (escapedSymbolsMap.has(lastToken) && tokens[tokens.length - 2] === "\\")
   );
 };
 
-const checkNext = (token: string, stringChar: string): boolean => {
+const matchNextPair = (token: string, stringChar: string): boolean => {
   return token === stringChar;
 };
 
@@ -80,7 +79,7 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
           input.slice(parseInt(index))
         );
       } else {
-        if (!checkNext(tokensAfterFirstQuant[0], char)) return false;
+        if (!matchNextPair(tokensAfterFirstQuant[0], char)) return false;
         tokensAfterFirstQuant = tokensAfterFirstQuant.slice(1);
       }
     }
@@ -94,15 +93,17 @@ const digits = (tokens: string, input: string): boolean => {
   const inputArray = Array.from(input);
 
   for (const index in inputArray) {
+    const nextToken = tokens[parseInt(index) + 1];
+
     if (tokens[index] === "d") {
       result = !isNaN(Number(input[index]));
-    } else if (symbolMap.has(tokens[parseInt(index) + 1])) {
-      return symbolMap.get(tokens[parseInt(index) + 1])(
+    } else if (symbolMap.has(nextToken)) {
+      return symbolMap.get(nextToken)(
         tokens.slice(parseInt(index)),
         input.slice(parseInt(index))
       );
     } else if (tokens[index] === "\\") {
-      return escapedSymbolsMap.get(tokens[parseInt(index) + 1])(
+      return escapedSymbolsMap.get(nextToken)(
         tokens.slice(parseInt(index) + 1),
         input.slice(parseInt(index))
       );
@@ -123,16 +124,14 @@ const anyChar = (tokens: string, input: string): boolean => {
   }
 
   for (const index in inputArray) {
+    const nextToken = tokens[parseInt(index) + 1];
     if (tokens[index] !== ".") {
-      if (
-        !symbolMap.has(tokens[parseInt(index) + 1]) ||
-        tokens[parseInt(index) + 1] === "."
-      ) {
+      if (!symbolMap.has(nextToken) || nextToken === ".") {
         if (tokens[index] !== inputArray[index]) {
           return false;
         }
       } else {
-        return symbolMap.get(tokens[parseInt(index) + 1])(
+        return symbolMap.get(nextToken)(
           tokens.slice(parseInt(index)),
           input.slice(parseInt(index))
         );
@@ -147,29 +146,19 @@ const oneToUnlimited = (tokens: string, input: string): boolean => {
   if (tokens[0] !== input[0]) {
     return false;
   }
-  let result = moveThrewQuantifiedInput(tokens, input);
-
-  return result;
+  return moveThrewQuantifiedInput(tokens, input);
 };
 
 const zeroToUnlimited = (tokens: string, input: string): boolean => {
-  let result = true;
-  result = moveThrewQuantifiedInput(tokens, input);
-
-  return result;
+  return moveThrewQuantifiedInput(tokens, input);
 };
 
 const zeroOrOne = (tokens: string, input: string): boolean => {
-  let result = true;
   if (tokens[0] === input[1]) return false;
-
-  result = moveThrewQuantifiedInput(tokens, input);
-
-  return result;
+  return moveThrewQuantifiedInput(tokens, input);
 };
 
 const quantifiersFirst = (tokens: string, input: string): boolean => {
-  let result = false;
   const firstQuantifier = Array.from(tokens).find((t) => symbolMap.has(t));
   const firstQuantIndex = tokens.indexOf(firstQuantifier);
   const tokensB4Quantifier =
@@ -177,46 +166,33 @@ const quantifiersFirst = (tokens: string, input: string): boolean => {
 
   for (let index in Array.from(tokensB4Quantifier)) {
     if (tokensB4Quantifier[index] !== input[index]) {
-      return result;
+      return false;
     }
   }
 
   tokens = firstQuantIndex !== 0 ? tokens.slice(firstQuantIndex - 1) : tokens;
 
-  if (
-    symbolMap.get(firstQuantifier)(
-      tokens,
-      input.slice(tokensB4Quantifier.length)
-    )
-  ) {
-    result = true;
-  }
-
-  return result;
+  return symbolMap.get(firstQuantifier)(
+    tokens,
+    input.slice(tokensB4Quantifier.length)
+  );
 };
 
 const escapedCharFirst = (tokens: string, input: string): boolean => {
-  let result = false;
   const firstEscapeIndex = tokens.indexOf("\\");
   const tokensB4Escape =
     firstEscapeIndex !== 0 ? tokens.slice(0, firstEscapeIndex) : [];
 
   for (let index in Array.from(tokensB4Escape)) {
     if (tokensB4Escape[index] !== input[index]) {
-      return result;
+      return false;
     }
   }
 
-  if (
-    escapedSymbolsMap.get(tokens[firstEscapeIndex + 1])(
-      tokens.slice(firstEscapeIndex + 1),
-      input.slice(tokensB4Escape.length)
-    )
-  ) {
-    result = true;
-  }
-
-  return result;
+  return escapedSymbolsMap.get(tokens[firstEscapeIndex + 1])(
+    tokens.slice(firstEscapeIndex + 1),
+    input.slice(tokensB4Escape.length)
+  );
 };
 
 const hasSymbols = (tokens: string): boolean => {
@@ -272,17 +248,12 @@ export const findMatch = (
     result.string = input;
   } else if (hasSymbols(tokens)) {
     const [firstQuantIndex, firstEscapeIndex] = getFirstSymbolIndexes(tokens);
+    const firstFunction =
+      firstQuantIndex < firstEscapeIndex ? quantifiersFirst : escapedCharFirst;
 
-    if (firstQuantIndex < firstEscapeIndex) {
-      if (runMatching(tokens, input, quantifiersFirst)) {
-        result.match = true;
-        result.string = input;
-      }
-    } else {
-      if (runMatching(tokens, input, escapedCharFirst)) {
-        result.match = true;
-        result.string = input;
-      }
+    if (runMatching(tokens, input, firstFunction)) {
+      result.match = true;
+      result.string = input;
     }
   }
 

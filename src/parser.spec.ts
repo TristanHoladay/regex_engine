@@ -4,6 +4,7 @@ import {
   removeRegexSlashes,
   checkForLonelyQuantifier,
   checkForQuantifiedQuantifiers,
+  handleLastTokenNotMatched,
 } from "./parser";
 
 describe("parsing patterns", () => {
@@ -480,3 +481,25 @@ describe("matching", () => {
     });
   });
 });
+
+describe('handleLastTokenNotMatched', () => {
+  it('returns true if token not matched', () => {
+    expect(handleLastTokenNotMatched('abc', 'ab')).toBeTruthy();
+  })
+
+  it('returns false if token is matched', () => {
+    expect(handleLastTokenNotMatched('abc', 'abc')).toBeFalsy();
+  })
+
+  it('returns false if last token quantifier', () => {
+    expect(handleLastTokenNotMatched('abc*', 'abc')).toBeFalsy();
+  })
+
+  it('returns true if token is d and not \\ before it and no match', () => {
+    expect(handleLastTokenNotMatched('abcd', 'abc')).toBeTruthy();
+  })
+
+  it('returns false if token is d and there is \\ before it', () => {
+    expect(handleLastTokenNotMatched('abc\\d', 'abc')).toBeFalsy();
+  })
+})

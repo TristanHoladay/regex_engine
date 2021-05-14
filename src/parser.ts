@@ -22,7 +22,7 @@ export const checkForQuantifiedQuantifiers = (tokens: string): void => {
     ) {
       throw new Error(
         `You cannot quantify a quantifier (i.e. ${tokenArray[index]}${
-          tokenArray[parseInt(index) + 1]
+          nextToken
         })`
       );
     }
@@ -40,12 +40,15 @@ const runChecks = (pattern: string): void => {
 };
 
 // could be missing a fail case //
-const handleLastTokenNotMatched = (tokens: string, input: string): boolean => {
+export const handleLastTokenNotMatched = (tokens: string, input: string): boolean => {
   const lastToken = tokens[tokens.length - 1];
-  return (
-    (!input.includes(lastToken) && !symbolMap.has(lastToken)) ||
-    (escapedSymbolsMap.has(lastToken) && tokens[tokens.length - 2] === "\\")
-  );
+  if((!input.includes(lastToken) && !symbolMap.has(lastToken))) {
+    if(escapedSymbolsMap.has(lastToken) && tokens[tokens.length - 2] !== "\\") {
+      return true;
+    } else if(!escapedSymbolsMap.has(lastToken)) {
+      return true;
+    }
+  }
 };
 
 const matchNextPair = (token: string, stringChar: string): boolean => {
@@ -59,10 +62,12 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
   let tokensAfterFirstQuant: string = tokens.slice(2);
 
   if (handleLastTokenNotMatched(tokens, input)) {
+    // console.log('here')
     return false;
   }
 
   for (const index in inputArray) {
+    // console.log('here')
     const char = inputArray[index];
     if (tokens[0] !== char) {
       if (symbolMap.has(tokensAfterFirstQuant[1])) {
@@ -74,6 +79,7 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
           input.slice(parseInt(index))
         );
       } else if (tokensAfterFirstQuant[0] === "\\") {
+        // console.log('here')
         return escapedSymbolsMap.get(tokensAfterFirstQuant[1])(
           tokensAfterFirstQuant.slice(1),
           input.slice(parseInt(index))

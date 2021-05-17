@@ -18,12 +18,11 @@ export const checkForQuantifiedQuantifiers = (tokens: string): void => {
     if (
       symbolMap.has(token) &&
       symbolMap.has(nextToken) &&
-      (token !== "." || nextToken !== ".")
+      token !== "." &&
+      nextToken !== "."
     ) {
       throw new Error(
-        `You cannot quantify a quantifier (i.e. ${tokenArray[index]}${
-          nextToken
-        })`
+        `You cannot quantify a quantifier (i.e. ${tokenArray[index]}${nextToken})`
       );
     }
   }
@@ -40,13 +39,19 @@ const runChecks = (pattern: string): void => {
 };
 
 // could be missing a fail case //
-export const handleLastTokenNotMatched = (tokens: string, input: string): boolean => {
+export const handleLastTokenNotMatched = (
+  tokens: string,
+  input: string
+): boolean => {
   let result = false;
   const lastToken = tokens[tokens.length - 1];
-  if((!input.includes(lastToken) && !symbolMap.has(lastToken))) {
-    if(escapedSymbolsMap.has(lastToken) && tokens[tokens.length - 2] !== "\\") {
+  if (!input.includes(lastToken) && !symbolMap.has(lastToken)) {
+    if (
+      escapedSymbolsMap.has(lastToken) &&
+      tokens[tokens.length - 2] !== "\\"
+    ) {
       result = true;
-    } else if(!escapedSymbolsMap.has(lastToken)) {
+    } else if (!escapedSymbolsMap.has(lastToken)) {
       result = true;
     }
   }
@@ -64,24 +69,26 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
   let tokensAfterFirstQuant: string = tokens.slice(2);
 
   if (handleLastTokenNotMatched(tokens, input)) {
-    // console.log('here')
     return false;
   }
 
   for (const index in inputArray) {
-    // console.log('here')
     const char = inputArray[index];
-    if (tokens[0] !== char) {
-      if (symbolMap.has(tokensAfterFirstQuant[1])) {
+    if (tokens[0] !== char && tokens[0] !== ".") {
+      if (
+        symbolMap.has(tokensAfterFirstQuant[0]) ||
+        symbolMap.has(tokensAfterFirstQuant[1])
+      ) {
         const remainingTokens = tokens.slice(2);
-        const quantSymbol = mapKeys.find((k) => k === tokensAfterFirstQuant[1]);
+        const i = symbolMap.has(tokensAfterFirstQuant[0]) ? 0 : 1;
+        const quantSymbol = mapKeys.find((k) => k === tokensAfterFirstQuant[i]);
         const nextQuantIndex = remainingTokens.indexOf(quantSymbol);
+
         return symbolMap.get(quantSymbol)(
-          remainingTokens.slice(nextQuantIndex - 1),
+          remainingTokens.slice(nextQuantIndex - i),
           input.slice(parseInt(index))
         );
       } else if (tokensAfterFirstQuant[0] === "\\") {
-        // console.log('here')
         return escapedSymbolsMap.get(tokensAfterFirstQuant[1])(
           tokensAfterFirstQuant.slice(1),
           input.slice(parseInt(index))
@@ -105,7 +112,7 @@ const digits = (tokens: string, input: string): boolean => {
 
     if (tokens[index] === "d") {
       result = !isNaN(Number(input[index]));
-    } else if (symbolMap.has(nextToken)) {
+    } else if (symbolMap.has(nextToken) && nextToken !== ".") {
       return symbolMap.get(nextToken)(
         tokens.slice(parseInt(index)),
         input.slice(parseInt(index))
@@ -132,17 +139,27 @@ const anyChar = (tokens: string, input: string): boolean => {
   }
 
   for (const index in inputArray) {
+    const token = tokens[index];
     const nextToken = tokens[parseInt(index) + 1];
+
     if (tokens[index] !== ".") {
-      if (!symbolMap.has(nextToken) || nextToken === ".") {
-        if (tokens[index] !== inputArray[index]) {
-          return false;
-        }
-      } else {
-        return symbolMap.get(nextToken)(
-          tokens.slice(parseInt(index)),
+      if (
+        symbolMap.has(token) ||
+        (symbolMap.has(nextToken) && nextToken !== ".")
+      ) {
+        const symbol = symbolMap.has(token) ? token : nextToken;
+        const i = symbolMap.has(token) ? 1 : 0;
+        return symbolMap.get(symbol)(
+          tokens.slice(parseInt(index) - i),
+          input.slice(parseInt(index) - i)
+        );
+      } else if (tokens[index] === "\\") {
+        return escapedSymbolsMap.get(nextToken)(
+          tokens.slice(parseInt(index) + 1),
           input.slice(parseInt(index))
         );
+      } else {
+        result = tokens[index] === inputArray[index];
       }
     }
   }

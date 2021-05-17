@@ -385,6 +385,41 @@ describe("matching", () => {
           string: "aabcddde",
         });
       });
+
+      it("matches char - . - char - +", () => {
+        expect(findMatch("/a.c+/", "abcc")).toStrictEqual({
+          match: true,
+          string: "abcc",
+        });
+      });
+
+      it("matches char - * - . - .", () => {
+        expect(findMatch("/a*.b/", "aabb")).toStrictEqual({
+          match: true,
+          string: "aabb",
+        });
+      });
+
+      it("matches char - * - . - .", () => {
+        expect(findMatch("/a*../", "aabc")).toStrictEqual({
+          match: true,
+          string: "aabc",
+        });
+      });
+
+      it("matches char - * - . - *", () => {
+        expect(findMatch("/a*.*/", "aabbb")).toStrictEqual({
+          match: true,
+          string: "aabbb",
+        });
+      });
+
+      // it("does not matches char - * - . - * - char", () => {
+      //   expect(findMatch("/a*.*ce/", "aabbbde")).toStrictEqual({
+      //     match: false,
+      //     string: "",
+      //   });
+      // });
     });
 
     describe("digits", () => {
@@ -473,33 +508,33 @@ describe("matching", () => {
       });
 
       it("should match multi string char - + - digit - string char - *s - string char -digit", () => {
-        expect(findMatch("/ab+\\dc*d*e\\d/", "ab1ce2")).toStrictEqual({
+        expect(findMatch("/ab+\\dc*d*e.\\d/", "ab1cef2")).toStrictEqual({
           match: true,
-          string: "ab1ce2",
+          string: "ab1cef2",
         });
       });
     });
   });
 });
 
-describe('handleLastTokenNotMatched', () => {
-  it('returns true if token not matched', () => {
-    expect(handleLastTokenNotMatched('abc', 'ab')).toBeTruthy();
-  })
+describe("handleLastTokenNotMatched", () => {
+  it("returns true if token not matched", () => {
+    expect(handleLastTokenNotMatched("abc", "ab")).toBeTruthy();
+  });
 
-  it('returns false if token is matched', () => {
-    expect(handleLastTokenNotMatched('abc', 'abc')).toBeFalsy();
-  })
+  it("returns false if token is matched", () => {
+    expect(handleLastTokenNotMatched("abc", "abc")).toBeFalsy();
+  });
 
-  it('returns false if last token quantifier', () => {
-    expect(handleLastTokenNotMatched('abc*', 'abc')).toBeFalsy();
-  })
+  it("returns false if last token quantifier", () => {
+    expect(handleLastTokenNotMatched("abc*", "abc")).toBeFalsy();
+  });
 
-  it('returns true if token is d and not \\ before it and no match', () => {
-    expect(handleLastTokenNotMatched('abcd', 'abc')).toBeTruthy();
-  })
+  it("returns true if token is d and not \\ before it and no match", () => {
+    expect(handleLastTokenNotMatched("abcd", "abc")).toBeTruthy();
+  });
 
-  it('returns false if token is d and there is \\ before it', () => {
-    expect(handleLastTokenNotMatched('abc\\d', 'abc')).toBeFalsy();
-  })
-})
+  it("returns false if token is d and there is \\ before it", () => {
+    expect(handleLastTokenNotMatched("abc\\d", "abc")).toBeFalsy();
+  });
+});

@@ -414,6 +414,13 @@ describe("matching", () => {
         });
       });
 
+      it("matches char - * - . - +", () => {
+        expect(findMatch("/a*.+/", "aa")).toStrictEqual({
+          match: false,
+          string: "",
+        });
+      });
+
       // it("does not matches char - * - . - * - char", () => {
       //   expect(findMatch("/a*.*ce/", "aabbbde")).toStrictEqual({
       //     match: false,
@@ -536,5 +543,13 @@ describe("handleLastTokenNotMatched", () => {
 
   it("returns false if token is d and there is \\ before it", () => {
     expect(handleLastTokenNotMatched("abc\\d", "abc")).toBeFalsy();
+  });
+
+  it("returns false if token is .", () => {
+    expect(handleLastTokenNotMatched("a.", "ab")).toBeFalsy();
+  });
+
+  it("return false if 2nd to last token is .", () => {
+    expect(handleLastTokenNotMatched("a.+", "ab")).toBeFalsy();
   });
 });

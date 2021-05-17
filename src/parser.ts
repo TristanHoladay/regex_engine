@@ -45,16 +45,16 @@ export const handleLastTokenNotMatched = (
 ): boolean => {
   let result = false;
   const lastToken = tokens[tokens.length - 1];
+  const secondToLastToken = tokens[tokens.length - 2];
+
   if (!input.includes(lastToken) && !symbolMap.has(lastToken)) {
-    if (
-      escapedSymbolsMap.has(lastToken) &&
-      tokens[tokens.length - 2] !== "\\"
-    ) {
+    if (escapedSymbolsMap.has(lastToken) && secondToLastToken !== "\\") {
       result = true;
     } else if (!escapedSymbolsMap.has(lastToken)) {
       result = true;
     }
   }
+
   return result;
 };
 
@@ -100,6 +100,9 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
     }
   }
 
+  if (tokensAfterFirstQuant && !tokensAfterFirstQuant.includes("*"))
+    return false;
+
   return result;
 };
 
@@ -123,7 +126,7 @@ const digits = (tokens: string, input: string): boolean => {
         input.slice(parseInt(index))
       );
     } else {
-      result = tokens[index] === input[index];
+      if (tokens[index] !== input[index]) return false;
     }
   }
 
@@ -159,7 +162,7 @@ const anyChar = (tokens: string, input: string): boolean => {
           input.slice(parseInt(index))
         );
       } else {
-        result = tokens[index] === inputArray[index];
+        if (tokens[index] !== inputArray[index]) return false;
       }
     }
   }
@@ -168,6 +171,7 @@ const anyChar = (tokens: string, input: string): boolean => {
 };
 
 const oneToUnlimited = (tokens: string, input: string): boolean => {
+  console.log("here");
   if (tokens[0] !== input[0]) {
     return false;
   }

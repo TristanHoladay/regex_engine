@@ -58,15 +58,15 @@ export const handleLastTokenNotMatched = (
   return result;
 };
 
-const matchNextPair = (token: string, stringChar: string): boolean => {
-  return token === stringChar;
+const isQuantifiedAnyCharRemaingAfterInputLoop = (tokensAfterQuant: string) => {
+  return tokensAfterQuant && !tokensAfterQuant.includes("*");
 };
 
 const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
   let result = true;
   const inputArray = Array.from(input);
   const mapKeys = Array.from(symbolMap.keys());
-  let tokensAfterFirstQuant: string = tokens.slice(2);
+  let tokensAfterQuant = tokens.slice(2);
 
   if (handleLastTokenNotMatched(tokens, input)) {
     return false;
@@ -74,63 +74,76 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
 
   for (const index in inputArray) {
     const char = inputArray[index];
+
     if (tokens[0] !== char && tokens[0] !== ".") {
       if (
-        symbolMap.has(tokensAfterFirstQuant[0]) ||
-        symbolMap.has(tokensAfterFirstQuant[1])
+        symbolMap.has(tokensAfterQuant[0]) ||
+        symbolMap.has(tokensAfterQuant[1])
       ) {
         const remainingTokens = tokens.slice(2);
-        const i = symbolMap.has(tokensAfterFirstQuant[0]) ? 0 : 1;
-        const quantSymbol = mapKeys.find((k) => k === tokensAfterFirstQuant[i]);
+        const i = symbolMap.has(tokensAfterQuant[0]) ? 0 : 1;
+        const quantSymbol = mapKeys.find((k) => k === tokensAfterQuant[i]);
         const nextQuantIndex = remainingTokens.indexOf(quantSymbol);
 
         return symbolMap.get(quantSymbol)(
           remainingTokens.slice(nextQuantIndex - i),
           input.slice(parseInt(index))
         );
-      } else if (tokensAfterFirstQuant[0] === "\\") {
-        return escapedSymbolsMap.get(tokensAfterFirstQuant[1])(
-          tokensAfterFirstQuant.slice(1),
+      } else if (tokensAfterQuant[0] === "\\") {
+        return escapedSymbolsMap.get(tokensAfterQuant[1])(
+          tokensAfterQuant.slice(1),
           input.slice(parseInt(index))
         );
       } else {
-        if (!matchNextPair(tokensAfterFirstQuant[0], char)) return false;
-        tokensAfterFirstQuant = tokensAfterFirstQuant.slice(1);
+        if (tokensAfterQuant[0] !== char) return false;
+        tokensAfterQuant = tokensAfterQuant.slice(1);
       }
     }
   }
 
-  if (tokensAfterFirstQuant && !tokensAfterFirstQuant.includes("*"))
-    return false;
+  if (isQuantifiedAnyCharRemaingAfterInputLoop(tokensAfterQuant)) return false;
 
   return result;
 };
 
-const digits = (tokens: string, input: string): boolean => {
-  let result: boolean;
-  const inputArray = Array.from(input);
+const currentOrNextIsSymbol = (
+  currentToken: string,
+  nextToken: string
+): boolean => {
+  return (
+    symbolMap.has(currentToken) ||
+    (symbolMap.has(nextToken) && nextToken !== ".")
+  );
+};
 
-  for (const index in inputArray) {
-    const nextToken = tokens[parseInt(index) + 1];
+const pickAndRunNextCase = (
+  tokens: string,
+  input: string,
+  index: number
+): boolean => {
+  let defaultRes = true;
+  const currentToken = tokens[index];
+  const nextToken = tokens[index + 1];
+  const currentChar = Array.from(input)[index];
 
-    if (tokens[index] === "d") {
-      result = !isNaN(Number(input[index]));
-    } else if (symbolMap.has(nextToken) && nextToken !== ".") {
-      return symbolMap.get(nextToken)(
-        tokens.slice(parseInt(index)),
-        input.slice(parseInt(index))
-      );
-    } else if (tokens[index] === "\\") {
-      return escapedSymbolsMap.get(nextToken)(
-        tokens.slice(parseInt(index) + 1),
-        input.slice(parseInt(index))
-      );
-    } else {
-      if (tokens[index] !== input[index]) return false;
-    }
+  if (currentOrNextIsSymbol(currentToken, nextToken)) {
+    const symbol = symbolMap.has(currentToken) ? currentToken : nextToken;
+    const i = symbolMap.has(currentToken) ? 1 : 0;
+
+    return symbolMap.get(symbol)(
+      tokens.slice(index - i),
+      input.slice(index - i)
+    );
+  } else if (currentToken === "\\") {
+    return escapedSymbolsMap.get(nextToken)(
+      tokens.slice(index + 1),
+      input.slice(index)
+    );
+  } else {
+    if (currentToken !== currentChar) defaultRes = false;
   }
 
-  return result;
+  return defaultRes;
 };
 
 const anyChar = (tokens: string, input: string): boolean => {
@@ -142,47 +155,40 @@ const anyChar = (tokens: string, input: string): boolean => {
   }
 
   for (const index in inputArray) {
-    const token = tokens[index];
-    const nextToken = tokens[parseInt(index) + 1];
-
     if (tokens[index] !== ".") {
-      if (
-        symbolMap.has(token) ||
-        (symbolMap.has(nextToken) && nextToken !== ".")
-      ) {
-        const symbol = symbolMap.has(token) ? token : nextToken;
-        const i = symbolMap.has(token) ? 1 : 0;
-        return symbolMap.get(symbol)(
-          tokens.slice(parseInt(index) - i),
-          input.slice(parseInt(index) - i)
-        );
-      } else if (tokens[index] === "\\") {
-        return escapedSymbolsMap.get(nextToken)(
-          tokens.slice(parseInt(index) + 1),
-          input.slice(parseInt(index))
-        );
-      } else {
-        if (tokens[index] !== inputArray[index]) return false;
-      }
+      return pickAndRunNextCase(tokens, input, parseInt(index));
+    }
+  }
+  return result;
+};
+
+const digits = (tokens: string, input: string): boolean => {
+  let result: boolean;
+  const inputArray = Array.from(input);
+
+  for (const index in inputArray) {
+    if (tokens[index] !== "d") {
+      return pickAndRunNextCase(tokens, input, parseInt(index));
+    } else {
+      result = !isNaN(Number(input[index]));
     }
   }
 
   return result;
 };
 
-const oneToUnlimited = (tokens: string, input: string): boolean => {
-  console.log("here");
+const isOneToUnlimited = (tokens: string, input: string): boolean => {
   if (tokens[0] !== input[0]) {
     return false;
   }
   return moveThrewQuantifiedInput(tokens, input);
 };
 
-const zeroToUnlimited = (tokens: string, input: string): boolean => {
+const isZeroToUnlimited = (tokens: string, input: string): boolean => {
   return moveThrewQuantifiedInput(tokens, input);
 };
 
-const zeroOrOne = (tokens: string, input: string): boolean => {
+const isZeroOrOne = (tokens: string, input: string): boolean => {
   if (tokens[0] === input[1]) return false;
   return moveThrewQuantifiedInput(tokens, input);
 };
@@ -209,6 +215,7 @@ const quantifiersFirst = (tokens: string, input: string): boolean => {
 
 const escapedCharFirst = (tokens: string, input: string): boolean => {
   const firstEscapeIndex = tokens.indexOf("\\");
+  const firstEscapedToken = tokens[firstEscapeIndex + 1];
   const tokensB4Escape =
     firstEscapeIndex !== 0 ? tokens.slice(0, firstEscapeIndex) : [];
 
@@ -218,7 +225,7 @@ const escapedCharFirst = (tokens: string, input: string): boolean => {
     }
   }
 
-  return escapedSymbolsMap.get(tokens[firstEscapeIndex + 1])(
+  return escapedSymbolsMap.get(firstEscapedToken)(
     tokens.slice(firstEscapeIndex + 1),
     input.slice(tokensB4Escape.length)
   );
@@ -253,9 +260,9 @@ const runMatching = (
 };
 
 const symbolMap = new Map<string, Function>([
-  ["*", zeroToUnlimited],
-  ["+", oneToUnlimited],
-  ["?", zeroOrOne],
+  ["*", isZeroToUnlimited],
+  ["+", isOneToUnlimited],
+  ["?", isZeroOrOne],
   [".", anyChar],
 ]);
 

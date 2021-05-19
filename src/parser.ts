@@ -48,9 +48,10 @@ export const handleLastTokenNotMatched = (
   const secondToLastToken = tokens[tokens.length - 2];
 
   if (!input.includes(lastToken) && !symbolMap.has(lastToken)) {
-    if (escapedSymbolsMap.has(lastToken) && secondToLastToken !== "\\") {
-      result = true;
-    } else if (!escapedSymbolsMap.has(lastToken)) {
+    if (
+      (escapedSymbolsMap.has(lastToken) && secondToLastToken !== "\\") ||
+      !escapedSymbolsMap.has(lastToken)
+    ) {
       result = true;
     }
   }
@@ -193,7 +194,7 @@ const isZeroOrOne = (tokens: string, input: string): boolean => {
   return moveThrewQuantifiedInput(tokens, input);
 };
 
-const quantifiersFirst = (tokens: string, input: string): boolean => {
+const handleQuantifierFirst = (tokens: string, input: string): boolean => {
   const firstQuantifier = Array.from(tokens).find((t) => symbolMap.has(t));
   const firstQuantIndex = tokens.indexOf(firstQuantifier);
   const tokensB4Quantifier =
@@ -213,7 +214,7 @@ const quantifiersFirst = (tokens: string, input: string): boolean => {
   );
 };
 
-const escapedCharFirst = (tokens: string, input: string): boolean => {
+const handleEscapedCharFirst = (tokens: string, input: string): boolean => {
   const firstEscapeIndex = tokens.indexOf("\\");
   const firstEscapedToken = tokens[firstEscapeIndex + 1];
   const tokensB4Escape =
@@ -285,7 +286,9 @@ export const findMatch = (
   } else if (hasSymbols(tokens)) {
     const [firstQuantIndex, firstEscapeIndex] = getFirstSymbolIndexes(tokens);
     const firstFunction =
-      firstQuantIndex < firstEscapeIndex ? quantifiersFirst : escapedCharFirst;
+      firstQuantIndex < firstEscapeIndex
+        ? handleQuantifierFirst
+        : handleEscapedCharFirst;
 
     if (runMatching(tokens, input, firstFunction)) {
       result.match = true;

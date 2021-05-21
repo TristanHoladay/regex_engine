@@ -577,6 +577,22 @@ describe("matching", () => {
             string: "",
           });
         });
+
+        it("matches a{2} - b - c - d", () => {
+          expect(findMatch("/a{2}bcd/", "aabcd")).toStrictEqual({
+            match: true,
+            string: "aabcd",
+          });
+        });
+      });
+    });
+
+    describe("white space", () => {
+      it('matches "cat dog"', () => {
+        expect(findMatch("/cat dog/", "cat dog")).toStrictEqual({
+          match: true,
+          string: "cat dog",
+        });
       });
     });
   });

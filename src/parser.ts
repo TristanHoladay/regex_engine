@@ -147,7 +147,7 @@ const pickAndRunNextCase = (
   return defaultRes;
 };
 
-const anyChar = (tokens: string, input: string): boolean => {
+const matchAnyChar = (tokens: string, input: string): boolean => {
   let result = true;
   const inputArray = Array.from(input);
 
@@ -163,7 +163,7 @@ const anyChar = (tokens: string, input: string): boolean => {
   return result;
 };
 
-const digits = (tokens: string, input: string): boolean => {
+const matchDigits = (tokens: string, input: string): boolean => {
   let result: boolean;
   const inputArray = Array.from(input);
 
@@ -180,11 +180,11 @@ const digits = (tokens: string, input: string): boolean => {
 
 const quantifyPrevToken = (tokens: string, input: string) => {
   const closingBraceIndex = tokens.indexOf("}");
-  const number = tokens.substring(2, closingBraceIndex);
+  const numberOf = tokens.substring(2, closingBraceIndex);
   let result: boolean;
   let i: number = 0;
 
-  while (i < parseInt(number)) {
+  while (i < parseInt(numberOf)) {
     if (tokens[0] === "d") {
       result = !isNaN(Number(input[i]));
     } else {
@@ -196,14 +196,12 @@ const quantifyPrevToken = (tokens: string, input: string) => {
 
   if (tokens.slice(closingBraceIndex + 1).length !== 0) {
     tokens = tokens.slice(closingBraceIndex + 1);
-    input = input.slice(parseInt(number));
+    input = input.slice(parseInt(numberOf));
     const inputArray = Array.from(input);
 
     for (const index in inputArray) {
       if (symbolMap.has(tokens[0]) || symbolMap.has(tokens[1])) {
         const symbol = symbolMap.has(tokens[0]) ? tokens[0] : tokens[1];
-        const i = symbolMap.has(tokens[0]) ? 1 : 0;
-
         return symbolMap.get(symbol)(tokens, input);
       } else if (tokens[0] === "\\") {
         return escapedSymbolsMap.get(tokens[1])(tokens.slice(1), input);
@@ -217,18 +215,18 @@ const quantifyPrevToken = (tokens: string, input: string) => {
   return result;
 };
 
-const isOneToUnlimited = (tokens: string, input: string): boolean => {
+const matchOneToUnlimited = (tokens: string, input: string): boolean => {
   if (tokens[0] !== input[0]) {
     return false;
   }
   return moveThrewQuantifiedInput(tokens, input);
 };
 
-const isZeroToUnlimited = (tokens: string, input: string): boolean => {
+const matchZeroToUnlimited = (tokens: string, input: string): boolean => {
   return moveThrewQuantifiedInput(tokens, input);
 };
 
-const isZeroOrOne = (tokens: string, input: string): boolean => {
+const matchZeroOrOne = (tokens: string, input: string): boolean => {
   if (tokens[0] === input[1]) return false;
   return moveThrewQuantifiedInput(tokens, input);
 };
@@ -300,14 +298,14 @@ const runMatching = (
 };
 
 const symbolMap = new Map<string, Function>([
-  ["*", isZeroToUnlimited],
-  ["+", isOneToUnlimited],
-  ["?", isZeroOrOne],
-  [".", anyChar],
+  ["*", matchZeroToUnlimited],
+  ["+", matchOneToUnlimited],
+  ["?", matchZeroOrOne],
+  [".", matchAnyChar],
   ["{", quantifyPrevToken],
 ]);
 
-const escapedSymbolsMap = new Map<string, Function>([["d", digits]]);
+const escapedSymbolsMap = new Map<string, Function>([["d", matchDigits]]);
 
 export const findMatch = (
   regex: string,

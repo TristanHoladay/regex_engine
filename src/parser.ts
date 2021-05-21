@@ -84,7 +84,7 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
         const remainingTokens = tokens.slice(2);
         const i = symbolMap.has(tokensAfterQuant[0]) ? 0 : 1;
         const quantSymbol = mapKeys.find((k) => k === tokensAfterQuant[i]);
-        const nextQuantIndex = remainingTokens.indexOf(quantSymbol);
+        const nextQuantIndex = remainingTokens.indexOf(quantSymbol as string);
 
         return symbolMap.get(quantSymbol)(
           remainingTokens.slice(nextQuantIndex - i),
@@ -129,7 +129,7 @@ const pickAndRunNextCase = (
 
   if (currentOrNextIsSymbol(currentToken, nextToken)) {
     const symbol = symbolMap.has(currentToken) ? currentToken : nextToken;
-    const i = symbolMap.has(currentToken) ? 1 : 0;
+    const i = symbolMap.has(currentToken) && currentToken !== "." ? 1 : 0;
 
     return symbolMap.get(symbol)(
       tokens.slice(index - i),
@@ -172,6 +172,45 @@ const digits = (tokens: string, input: string): boolean => {
       return pickAndRunNextCase(tokens, input, parseInt(index));
     } else {
       result = !isNaN(Number(input[index]));
+    }
+  }
+
+  return result;
+};
+
+const quantifyPrevToken = (tokens: string, input: string) => {
+  const closingBraceIndex = tokens.indexOf("}");
+  const number = tokens.substring(2, closingBraceIndex);
+  let result: boolean;
+  let i: number = 0;
+
+  while (i < parseInt(number)) {
+    if (tokens[0] === "d") {
+      result = !isNaN(Number(input[i]));
+    } else {
+      result = tokens[0] === input[i];
+    }
+
+    i++;
+  }
+
+  if (tokens.slice(closingBraceIndex + 1).length !== 0) {
+    tokens = tokens.slice(closingBraceIndex + 1);
+    input = input.slice(parseInt(number));
+    const inputArray = Array.from(input);
+
+    for (const index in inputArray) {
+      if (symbolMap.has(tokens[0]) || symbolMap.has(tokens[1])) {
+        const symbol = symbolMap.has(tokens[0]) ? tokens[0] : tokens[1];
+        const i = symbolMap.has(tokens[0]) ? 1 : 0;
+
+        return symbolMap.get(symbol)(tokens, input);
+      } else if (tokens[0] === "\\") {
+        return escapedSymbolsMap.get(tokens[1])(tokens.slice(1), input);
+      } else {
+        result = tokens[index] === input[index];
+      }
+      // try to implement pickAndRunNextCase(tokens, input, parseInt(index));
     }
   }
 
@@ -265,6 +304,7 @@ const symbolMap = new Map<string, Function>([
   ["+", isOneToUnlimited],
   ["?", isZeroOrOne],
   [".", anyChar],
+  ["{", quantifyPrevToken],
 ]);
 
 const escapedSymbolsMap = new Map<string, Function>([["d", digits]]);

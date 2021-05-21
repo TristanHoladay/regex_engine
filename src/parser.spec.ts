@@ -520,6 +520,64 @@ describe("matching", () => {
           string: "ab1cef2",
         });
       });
+
+      describe("{n}", () => {
+        it("matches \\d 2 times based on following {2} group", () => {
+          expect(findMatch("/\\d{2}/", "12")).toStrictEqual({
+            match: true,
+            string: "12",
+          });
+        });
+
+        it("matches 'a' 2 times based on following {2} group", () => {
+          expect(findMatch("/a{2}/", "aa")).toStrictEqual({
+            match: true,
+            string: "aa",
+          });
+        });
+
+        it("does NOT match a{2} - b - * - c", () => {
+          expect(findMatch("/a{2}b*c/", "aabb")).toStrictEqual({
+            match: false,
+            string: "",
+          });
+        });
+
+        it("matches a{2} - . - c - d", () => {
+          expect(findMatch("/a{2}.cd/", "aabcd")).toStrictEqual({
+            match: true,
+            string: "aabcd",
+          });
+        });
+
+        it("does NOT match a{2} - \\d - . - c - d", () => {
+          expect(findMatch("/a{2}\\d.cd/", "aabcd")).toStrictEqual({
+            match: false,
+            string: "",
+          });
+        });
+
+        it("matches a{2} - b - . - d", () => {
+          expect(findMatch("/a{2}b.d/", "aabcd")).toStrictEqual({
+            match: true,
+            string: "aabcd",
+          });
+        });
+
+        it("matches a{2} - \\d - . - c - d", () => {
+          expect(findMatch("/a{2}\\d.cd/", "aa1bcd")).toStrictEqual({
+            match: true,
+            string: "aa1bcd",
+          });
+        });
+
+        it("does NOT match a{2} - b - c - d", () => {
+          expect(findMatch("/a{2}bcd/", "aabd")).toStrictEqual({
+            match: false,
+            string: "",
+          });
+        });
+      });
     });
   });
 });

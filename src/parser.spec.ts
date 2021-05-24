@@ -1,9 +1,11 @@
 import {
   checkIsRegex,
-  findMatch,
-  removeRegexSlashes,
   checkForLonelyQuantifier,
   checkForQuantifiedQuantifiers,
+} from "./regex_checks";
+import {
+  findMatch,
+  removeRegexSlashes,
   handleLastTokenNotMatched,
 } from "./parser";
 
@@ -592,6 +594,15 @@ describe("matching", () => {
         expect(findMatch("/cat dog/", "cat dog")).toStrictEqual({
           match: true,
           string: "cat dog",
+        });
+      });
+
+      it('matches "this is a sentence."', () => {
+        expect(
+          findMatch("/this is a sentence./", "this is a sentence.")
+        ).toStrictEqual({
+          match: true,
+          string: "this is a sentence.",
         });
       });
     });

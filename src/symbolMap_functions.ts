@@ -5,9 +5,9 @@ const isQuantifiedAnyCharRemaingAfterInputLoop = (tokensAfterQuant: string) => {
 };
 
 const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
-  let result = true;
   const inputArray = Array.from(input);
   const mapKeys = Array.from(symbolMap.keys());
+  let match: boolean;
   let tokensAfterQuant = tokens.slice(2);
 
   if (handleLastTokenNotMatched(tokens, input)) {
@@ -37,15 +37,14 @@ const moveThrewQuantifiedInput = (tokens: string, input: string): boolean => {
           input.slice(parseInt(index))
         );
       } else {
-        if (tokensAfterQuant[0] !== char) return false;
-        tokensAfterQuant = tokensAfterQuant.slice(1);
+        return tokensAfterQuant[0] === char;
       }
     }
   }
 
-  if (isQuantifiedAnyCharRemaingAfterInputLoop(tokensAfterQuant)) return false;
+  if (!isQuantifiedAnyCharRemaingAfterInputLoop(tokensAfterQuant)) match = true;
 
-  return result;
+  return match;
 };
 
 const currentOrNextIsSymbol = (
@@ -63,7 +62,6 @@ const pickAndRunNextCase = (
   input: string,
   index: number
 ): boolean => {
-  let defaultRes = true;
   const currentToken = tokens[index];
   const nextToken = tokens[index + 1];
   const currentChar = Array.from(input)[index];
@@ -71,7 +69,6 @@ const pickAndRunNextCase = (
   if (currentOrNextIsSymbol(currentToken, nextToken)) {
     const symbol = symbolMap.has(currentToken) ? currentToken : nextToken;
     const i = symbolMap.has(currentToken) && currentToken !== "." ? 1 : 0;
-
     return symbolMap.get(symbol)(
       tokens.slice(index - i),
       input.slice(index - i)
@@ -82,23 +79,21 @@ const pickAndRunNextCase = (
       input.slice(index)
     );
   } else {
-    if (currentToken !== currentChar) defaultRes = false;
+    return currentToken === currentChar;
   }
-
-  return defaultRes;
 };
 
-const quantifyBySpecificNum = (tokens: string, input: string) => {
+const quantifyBySpecificNum = (tokens: string, input: string): boolean => {
   const closingBraceIndex = tokens.indexOf("}");
   const numberOf = tokens.substring(2, closingBraceIndex);
-  let result: boolean;
+  let match: boolean;
   let i: number = 0;
 
   while (i < parseInt(numberOf)) {
     if (tokens[0] === "d") {
-      result = !isNaN(Number(input[i]));
+      return !isNaN(Number(input[i]));
     } else {
-      result = tokens[0] === input[i];
+      match = tokens[0] === input[i];
     }
 
     i++;
@@ -112,22 +107,23 @@ const quantifyBySpecificNum = (tokens: string, input: string) => {
     for (const index in inputArray) {
       if (symbolMap.has(tokens[0]) || symbolMap.has(tokens[1])) {
         const symbol = symbolMap.has(tokens[0]) ? tokens[0] : tokens[1];
-        console.log(tokens, input, index);
         return symbolMap.get(symbol)(tokens, input);
       } else if (tokens[0] === "\\") {
         return escapedSymbolsMap.get(tokens[1])(tokens.slice(1), input);
       } else {
-        result = tokens[index] === input[index];
+        match = tokens[index] === input[index];
       }
-      // try to implement pickAndRunNextCase(tokens, input, parseInt(index));
+
+      // match = pickAndRunNextCase(tokens, input, parseInt(index));
+      // if (!match) break;
     }
   }
 
-  return result;
+  return match;
 };
 
 const matchAnyChar = (tokens: string, input: string): boolean => {
-  let result = true;
+  let match: boolean;
   const inputArray = Array.from(input);
 
   if (handleLastTokenNotMatched(tokens, input)) {
@@ -137,24 +133,27 @@ const matchAnyChar = (tokens: string, input: string): boolean => {
   for (const index in inputArray) {
     if (tokens[index] !== ".") {
       return pickAndRunNextCase(tokens, input, parseInt(index));
+    } else {
+      match = true;
     }
   }
-  return result;
+
+  return match;
 };
 
 const matchDigits = (tokens: string, input: string): boolean => {
-  let result: boolean;
   const inputArray = Array.from(input);
+  let match: boolean;
 
   for (const index in inputArray) {
     if (tokens[index] !== "d") {
       return pickAndRunNextCase(tokens, input, parseInt(index));
     } else {
-      result = !isNaN(Number(input[index]));
+      match = !isNaN(Number(input[index]));
     }
   }
 
-  return result;
+  return match;
 };
 
 const matchOneToUnlimited = (tokens: string, input: string): boolean => {
